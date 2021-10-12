@@ -1,0 +1,152 @@
+item "Run AD Collector"{
+
+    local('$bid');
+        foreach $bid ($1){
+            runadcollector($bid);
+      }
+   }  #End Item 
+
+
+item "Run SET Command"{
+
+    local('$bid');
+        foreach $bid ($1){
+            runsetcommand($bid);
+      }
+   }  #End Item 
+
+
+item "List Forest Attributes"{
+
+    local('$bid');
+        foreach $bid ($1){
+            listforestattributes($bid);
+      }
+   }  #End Item 
+   
+item "List Domain Attributes"{
+
+    local('$bid');
+        foreach $bid ($1){
+            listdomainattributes($bid);
+      }
+   }  #End Item 
+ 
+   
+item "List Domain Controllers"{
+
+    local('$bid');
+        foreach $bid ($1){
+            listdomaincontrollers($bid);
+      }
+   }  #End Item 
+   
+item "List Domain Administrators"{
+
+    local('$bid');
+        foreach $bid ($1){
+            listdomainadministrators($bid);
+      }
+   }  #End Item   
+   
+item "List AS Rep Roastable Users"{
+
+    local('$bid');
+        foreach $bid ($1){
+            listASrepRoastableUsers($bid);
+      }
+   }  #End Item  
+   
+item "List SPN's in AD"{
+
+    local('$bid');
+        foreach $bid ($1){
+            listspn($bid);
+      }
+   } #End Item
+   
+item "List Delegation Attributes in Domain"{
+
+    local('$bid');
+        foreach $bid ($1){
+            listdelegation($bid);
+      }
+   }  #End Item
+   
+
+item "List All Computers in Domain"{
+        prompt_text("Enter Domain Name", "", lambda({
+                    bexecute_assembly($bids, script_resource('/exe/ldaputility.exe'), "DumpAllComputers $1");                
+                }, $bids => $1));
+			}
+			
+item "List All Users in Domain"{
+        prompt_text("Enter Domain Name", "", lambda({
+                    bexecute_assembly($bids, script_resource('/exe/ldaputility.exe'), "DumpAllUsers $1");                
+                }, $bids => $1));
+			}
+			
+			
+item "List All Groups in Domain"{
+        prompt_text("Enter Domain Name", "", lambda({
+                    bexecute_assembly($bids, script_resource('/exe/ldaputility.exe'), "DumpAllGroups $1");                
+                }, $bids => $1));
+			}
+			
+item "List Users in Group"{
+        prompt_text("Enter Group Name - If Spaces are involved - Add Quotes", "", lambda({
+                    bexecute_assembly($bids, script_resource('/exe/StandIn.exe'), "--group $1");                
+                }, $bids => $1));
+			}
+			
+item "Show Domain Password Policy"{
+        prompt_text("Enter Domain Name", "", lambda({
+                    bexecute_assembly($bids, script_resource('/exe/ldaputility.exe'), "DumpPasswordPolicy $1");                
+                }, $bids => $1));
+			}
+			
+item "Show Managed Objects"{
+        prompt_text("Enter Domain Name", "", lambda({
+                    bexecute_assembly($bids, script_resource('/exe/ldaputility.exe'), "CheckManaged $1");                
+                }, $bids => $1));
+			}
+
+sub runsetcommand{
+bexecute_assembly($1, script_resource('/exe/ldaputility.exe'), "set");
+}
+
+sub listspn{
+bexecute_assembly($1, script_resource('/exe/StandIn.exe'), "--spn");
+}
+
+sub listdelegation{
+bexecute_assembly($1, script_resource('/exe/StandIn.exe'), "--delegation");
+}
+
+sub listdomaincontrollers{
+bexecute_assembly($1, script_resource('/exe/StandIn.exe'), "--dc");
+}
+
+sub listdomainadministrators{
+bexecute_assembly($1, script_resource('/exe/StandIn.exe'), '--group "Domain Admins"');
+}
+
+sub listserveradministrators{
+bexecute_assembly($1, script_resource('/exe/StandIn.exe'), '--group "Server Admins"');
+}
+
+sub listASrepRoastableUsers{
+bexecute_assembly($1, script_resource('/exe/StandIn.exe'), "--asrep");
+}
+
+sub listforestattributes{
+bexecute_assembly($1, script_resource('/exe/TruffleSnout.exe'), "forest -a -n current");
+}
+
+sub listdomainattributes{
+bexecute_assembly($1, script_resource('/exe/TruffleSnout.exe'), "domain --all --name current");
+}
+
+sub runadcollector{
+bexecute_assembly($1, script_resource('/exe/ADCollector.exe'));
+}
